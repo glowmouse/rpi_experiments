@@ -26,18 +26,18 @@ target = "thumbv6m-none-eabi"
 # * inline-threshold=5 makes the compiler more aggressive and inlining functions
 # * no-vectorize-loops turns off the loop vectorizer (seeing as the M0+ doesn't
 #   have SIMD)
-#rustflags = [
-#    "-C", "link-arg=--nmagic",
-#    "-C", "link-arg=-Tlink.x",
-#    "-C", "inline-threshold=5",
-#    "-C", "no-vectorize-loops",
-#]
+rustflags = [
+#    "-C", "linker=flip-link",
+    "-C", "link-arg=--nmagic",
+    "-C", "link-arg=-Tlink.x",
+    "-C", "link-arg=-Tdefmt.x",
+]
 
 # This runner will make a UF2 file and then copy it to a mounted RP2040 in USB
 # Bootloader mode:
 [target.'cfg(all(target_arch = "arm", target_os = "none"))']
-runner = "probe-rs run --chip RP2040"
-#runner = "elf2uf2-rs -d"
+#runner = "probe-rs run --chip RP2040"
+runner = "elf2uf2-rs -d"
 
 # This runner will find a supported SWD debug probe and flash your RP2040 over
 # SWD:

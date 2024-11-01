@@ -30,6 +30,7 @@ use embedded_graphics::{
 use panic_probe as _;
 use ssd1306::{prelude::*, I2CDisplayInterface, Ssd1306};
 
+
 #[entry]
 fn main() -> ! {
     let p = embassy_rp::init(Default::default());
