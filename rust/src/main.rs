@@ -17,7 +17,7 @@
 #![no_std]
 #![no_main]
 
-use cortex_m::asm::nop;
+//use cortex_m::asm::nop;
 use cortex_m_rt::entry;
 use defmt_rtt as _;
 use panic_probe as _;
@@ -30,9 +30,19 @@ fn main() -> ! {
         p.PIN_16, // SDA
     );
 
+    let mut leds = hackernewyears::LEDs::new(
+        p.PIN_11,
+        p.PIN_12,
+        p.PIN_13,
+    );
+    leds.set( 1, 1, true );
+    leds.set( 1, 3, true );
+    leds.set( 3, 1, true );
+    leds.set( 3, 3, true );
+
     display.update();
 
     loop {
-        nop()
+        leds.update();
     }
 }
