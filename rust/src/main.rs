@@ -20,7 +20,7 @@ async fn main(_spawner: embassy_executor::Spawner) {
         p.PIN_13,
     );
 
-    let mut ginterrupt = hackernewyears::Interrupt::new(
+    let mut gsound = hackernewyears::Sound::new(
         p.PIN_1,
         p.PIN_2,
         p.PWM_SLICE0
@@ -36,7 +36,7 @@ async fn main(_spawner: embassy_executor::Spawner) {
         ticker.next().await;
         display.update();
         leds.update();
-        ginterrupt.update();
+        gsound.update();
     }
 }
 

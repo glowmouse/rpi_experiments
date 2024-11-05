@@ -12,11 +12,11 @@ use gpio::{Level, Output};
 static COUNTER: AtomicU32 = AtomicU32::new(0);
 static PWM: Mutex<CriticalSectionRawMutex, RefCell<Option<Pwm>>> = Mutex::new(RefCell::new(None));
 
-pub struct Interrupt<'a> {
+pub struct Sound<'a> {
     debug_out: Output<'a>,
 }
 
-impl Interrupt<'_> {
+impl Sound<'_> {
     pub fn new(
         pin: embassy_rp::peripherals::PIN_1,
         debug_pin: embassy_rp::peripherals::PIN_2,
