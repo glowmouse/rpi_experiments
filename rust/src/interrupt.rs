@@ -1,9 +1,10 @@
-use core::cell::{Cell, RefCell};
+use core::cell::{RefCell};
 use embassy_sync::blocking_mutex::Mutex;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_rp::pwm::{Config, Pwm};
 use embassy_rp::interrupt;
 use portable_atomic::{AtomicU32, Ordering};
+use fixed::{types::extra::U4, FixedU16};
 
 use embassy_rp::gpio;
 use gpio::{Level, Output};
@@ -26,11 +27,18 @@ impl Interrupt<'_> {
         let pwm = embassy_rp::pwm::Pwm::new_output_b(pwm_slice, pin, Default::default());
         PWM.lock(|p| p.borrow_mut().replace(pwm));
 
+        let mut config = Config::default();
+        config.top = 65535;
+        config.compare_b = config.top/16;
+        config.divider= FixedU16::from_bits(4095);
+        PWM.lock(|p| p.borrow_mut().as_mut().unwrap().set_config(&config));
+
         // Enable the interrupt for pwm slice 0
         embassy_rp::pac::PWM.inte().modify(|w| w.set_ch0(true));
         unsafe {
             cortex_m::peripheral::NVIC::unmask(interrupt::PWM_IRQ_WRAP);
         }
+
 
         //Self { /*data,*/ state:0 }
         Self {debug_out}
