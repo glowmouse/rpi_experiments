@@ -4,7 +4,7 @@ use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_rp::pwm::{Config, Pwm};
 use embassy_rp::interrupt;
 use portable_atomic::{AtomicU32, Ordering};
-use fixed::{types::extra::U4, FixedU16};
+use fixed::{FixedU16};
 
 use embassy_rp::gpio;
 use gpio::{Level, Output};
@@ -14,7 +14,6 @@ static PWM: Mutex<CriticalSectionRawMutex, RefCell<Option<Pwm>>> = Mutex::new(Re
 
 pub struct Interrupt<'a> {
     debug_out: Output<'a>,
-    //state: u32
 }
 
 impl Interrupt<'_> {
@@ -27,9 +26,13 @@ impl Interrupt<'_> {
         let pwm = embassy_rp::pwm::Pwm::new_output_b(pwm_slice, pin, Default::default());
         PWM.lock(|p| p.borrow_mut().replace(pwm));
 
+        // PWM frequency is 62.5Mhz
+        // Divided by 128, 268353
+        // Top 65535,  4hz
+
         let mut config = Config::default();
         config.top = 65535;
-        config.compare_b = config.top/16;
+        config.compare_b = config.top/2;
         config.divider= FixedU16::from_bits(4095);
         PWM.lock(|p| p.borrow_mut().as_mut().unwrap().set_config(&config));
 
@@ -39,11 +42,10 @@ impl Interrupt<'_> {
             cortex_m::peripheral::NVIC::unmask(interrupt::PWM_IRQ_WRAP);
         }
 
-
-        //Self { /*data,*/ state:0 }
         Self {debug_out}
     }
 
+    // Entirely for debugging.
     pub fn update(&mut self)
     {
         let counter = COUNTER.load(Ordering::Relaxed);
@@ -56,37 +58,14 @@ impl Interrupt<'_> {
                 self.debug_out.set_low();
             }
         }
-
-        //self.debug_out.set_low();
-        /*
-        let cycle = self.state % 2;
-
-        match cycle {
-            0 => {
-                self.data.set_low();
-            }
-            1..=u32::MAX => {
-                self.data.set_high();
-            }
-        }
-
-        self.state = self.state + 1;
-        */
     }
 }
 
 #[interrupt]
 fn PWM_IRQ_WRAP() {
     critical_section::with(|cs| {
-        //let mut adc = ADC.borrow(cs).borrow_mut();
-        //let (adc, p26) = adc.as_mut().unwrap();
-        //let val = adc.blocking_read(p26).unwrap();
-        //ADC_VALUES.try_send(val).ok();
-
-        // Clear the interrupt, so we don't immediately re-enter this irq handler
         PWM.borrow(cs).borrow_mut().as_mut().unwrap().clear_wrapped();
     });
     COUNTER.fetch_add(1, Ordering::Relaxed);
 }
-
 
