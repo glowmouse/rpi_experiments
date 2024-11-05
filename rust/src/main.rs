@@ -7,7 +7,7 @@ use defmt_rtt as _;
 use panic_probe as _;
 
 #[embassy_executor::main]
-async fn main(spawner: _embassy_executor::Spawner) {
+async fn main(_spawner: embassy_executor::Spawner) {
     let p = embassy_rp::init(Default::default());
     let mut display = hackernewyears::Display::new(
         p.I2C0, p.PIN_17, // SCLR
@@ -19,6 +19,11 @@ async fn main(spawner: _embassy_executor::Spawner) {
         p.PIN_12,
         p.PIN_13,
     );
+
+    let mut ginterrupt = hackernewyears::Interrupt::new(
+        p.PIN_10
+    );
+
     leds.set( 1, 1, true );
     leds.set( 1, 3, true );
     leds.set( 3, 1, true );
@@ -29,6 +34,7 @@ async fn main(spawner: _embassy_executor::Spawner) {
         ticker.next().await;
         display.update();
         leds.update();
+        ginterrupt.update();
     }
 }
 
