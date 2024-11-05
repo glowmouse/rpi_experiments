@@ -21,7 +21,9 @@ async fn main(_spawner: embassy_executor::Spawner) {
     );
 
     let mut ginterrupt = hackernewyears::Interrupt::new(
-        p.PIN_10
+        p.PIN_1,
+        p.PIN_2,
+        p.PWM_SLICE0
     );
 
     leds.set( 1, 1, true );
