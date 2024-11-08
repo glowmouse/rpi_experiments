@@ -1,3 +1,5 @@
+// Resistor 32 ohm
+
 use core::cell::{RefCell};
 use embassy_sync::blocking_mutex::Mutex;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
@@ -12,8 +14,15 @@ use gpio::{Level, Output};
 static COUNTER: AtomicU32 = AtomicU32::new(0);
 static PWM: Mutex<CriticalSectionRawMutex, RefCell<Option<Pwm>>> = Mutex::new(RefCell::new(None));
 const BUFFER_SIZE: usize =256;
+const CONFIG_TOP: u16 = 256;
 static mut BUFFER: [u8; BUFFER_SIZE ] = [0; BUFFER_SIZE ];
 static mut BUFFER_POS: usize = 0;
+// target frequency is 48 khz
+// PWM 62.5Mhz
+// 125*1024*1024/256 (states)/48k
+// = 10.4
+//
+const CLOCK_DIVIDER: u16 = 10*16+10;
 
 pub struct Sound<'a> {
     debug_out: Output<'a>,
@@ -27,12 +36,13 @@ impl Sound<'_> {
     ) -> Self {
 
         for c in 0..BUFFER_SIZE {
-            let a: f32 = ( c as f32 ) / (BUFFER_SIZE as f32 ) * 3.14159265358979323846264338327950288_f32;
+            let a: f32 = ( c as f32 ) / (BUFFER_SIZE as f32 ) * 2.0*3.14159265358979323846264338327950288_f32;
             let s = micromath::F32Ext::sin( a );
-            let ints = (s * 255.0 ) as u8;
+            let ints = (s * 127.0 + 128.0 ) as u8;
 
             unsafe {
-                BUFFER[c as usize] = ints;
+                //BUFFER[c as usize] = ints;
+                BUFFER[ c as usize ] = if c < BUFFER_SIZE/2 { 255 } else {0}
             }
         }
 
@@ -45,9 +55,9 @@ impl Sound<'_> {
         // Top 65535,  4hz
 
         let mut config = Config::default();
-        config.top = 65535;
+        config.top = CONFIG_TOP;
         config.compare_b = config.top/2;
-        config.divider= FixedU16::from_bits(4095);
+        config.divider= FixedU16::from_bits( CLOCK_DIVIDER );
         PWM.lock(|p| p.borrow_mut().as_mut().unwrap().set_config(&config));
 
         // Enable the interrupt for pwm slice 0
@@ -78,20 +88,14 @@ impl Sound<'_> {
 #[interrupt]
 fn PWM_IRQ_WRAP() {
     critical_section::with(|cs| {
-        if (COUNTER.load(Ordering::Relaxed) % 256 ) == 0 {
+        if (COUNTER.load(Ordering::Relaxed) % 1) == 0 {
             let value:u8;
             unsafe {
-                BUFFER_POS = ( BUFFER_POS + 1 ) % BUFFER_SIZE;
+                BUFFER_POS = ( BUFFER_POS + 2 ) % BUFFER_SIZE;
                 value = BUFFER[ BUFFER_POS ];
             }
-            // I'm looking to update over 5 seconds
-            // Buffer size is 256, so 51.2 hz
-            // We're triggering every 256 cycles, so 13363 hz
-            // PWM frequency is 62.5Mhz
-            // If I set top to 256, I think I get
-            // 62.5*1024*1024/13363/256, or 19.15
             let mut config: Config = Config::default();
-            config.divider= FixedU16::from_bits(19*4);
+            config.divider= FixedU16::from_bits( CLOCK_DIVIDER );
             config.top = 256;
             config.compare_b = value as u16;
             PWM.lock(|p| p.borrow_mut().as_mut().unwrap().set_config(&config));
