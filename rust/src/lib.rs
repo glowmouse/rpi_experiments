@@ -9,3 +9,6 @@ pub use leds::LEDs;
 mod sound;
 pub use sound::Sound;
 
+mod stepper;
+pub use stepper::Stepper;
+
